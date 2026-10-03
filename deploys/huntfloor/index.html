@@ -992,7 +992,7 @@ document.addEventListener('click',e=>{
 },true);
 window._lastAct=Date.now();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.SESSION&&SESSION.token){try{pollUnread(true);}catch(e){}try{loadTicker();}catch(e){}}});
-const APP_VERSION='5.7.1';
+const APP_VERSION='5.7.2';
 async function ulPricePreview(){const el=document.getElementById('ulPriceShow');if(!el||!window.UL)return;const r=await rpc('fn_price_preview',{p_token:SESSION.token,p_source:UL.source||null,p_category:UL.category||null}).catch(()=>null);el.textContent=r&&r.ok&&r.price!=null?'◉'+fmt(r.price)+(r.auto?' · auto-decay':' · fixed'):'— no price set for this source';}
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent='HuntFloor v'+APP_VERSION;});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
@@ -1614,11 +1614,13 @@ async function quoteModal(pid){const p=(PURCHASES||[]).find(x=>x.id===pid)||(win
       <div><label>Guests</label><input id="qGuests" type="number" inputmode="numeric" value="${(String(B.guests||'').match(/\d+/)||[''])[0]}" placeholder="e.g. 20"></div>
       <div><label>Property amount (₹, before GST) <span style="color:var(--gold-2)">*</span></label><input id="qAmt" type="number" inputmode="numeric" placeholder="e.g. 85000" value="${B.budget||''}"></div>
       <div><label>GST</label><select id="qGst"><option value="18">18%</option><option value="12">12%</option><option value="5">5%</option><option value="0">0%</option></select></div>
-      <div><label>Payment</label><select id="qMode"><option value="FULL_PAYMENT">Full payment</option><option value="ADVANCE">Advance</option></select></div>
+      <div><label>Payment</label><select id="qMode" onchange="$('qAdvBox').style.display=this.value==='ADVANCE_PAYMENT'?'block':'none'"><option value="FULL_PAYMENT">Full payment</option><option value="ADVANCE_PAYMENT">Advance</option></select></div>
+      <div id="qAdvBox" style="display:none"><label>Advance amount (₹)</label><input id="qAdv" type="number" inputmode="numeric" min="100" placeholder="e.g. 10000"></div>
       <div style="grid-column:1/-1"><label>Customer email (optional)</label><input id="qEmail" type="email" placeholder="for the PDF"></div></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn gold" onclick="quoteGo(${pid})">Send quotation</button></div>`);}
 async function quoteGo(pid){const v=id=>($(id)?$(id).value:'').trim();if(!v('qProp')){toast('Pick the property',true);return;}if(!v('qIn')){toast('Check-in date is needed',true);return;}if(!(+v('qAmt')>=1000)){toast('Enter the property amount before GST',true);return;}
-  const r=await rpc('fn_quote_create',{p_token:SESSION.token,p_purchase:pid,p_amount:+v('qAmt'),p_gst:v('qGst'),p_mode:v('qMode'),p_purpose:v('qPurpose'),p_checkin:v('qIn'),p_checkout:v('qOut')||null,p_guests:v('qGuests')?+v('qGuests'):null,p_property_id:+v('qProp'),p_email:v('qEmail')||null});
+  if(v('qMode')==='ADVANCE_PAYMENT'&&!(+v('qAdv')>0)){toast('Enter the advance amount',true);return;}
+  const r=await rpc('fn_quote_create',{p_token:SESSION.token,p_purchase:pid,p_amount:+v('qAmt'),p_gst:v('qGst'),p_mode:v('qMode'),p_advance:v('qMode')==='ADVANCE_PAYMENT'?(+v('qAdv')||null):null,p_purpose:v('qPurpose'),p_checkin:v('qIn'),p_checkout:v('qOut')||null,p_guests:v('qGuests')?+v('qGuests'):null,p_property_id:+v('qProp'),p_email:v('qEmail')||null});
   if(!r.ok){toast(r.error,true);return;}closeModal();toast('Quotation on its way — you\'ll see it on the card in a minute');setTimeout(()=>viewPurchaseById(pid),1500);}
 async function kycModal(qid,pid){
   modal(`<h3 class="serif" style="color:var(--gold-2);margin-bottom:4px">Customer ID for the payment link</h3>

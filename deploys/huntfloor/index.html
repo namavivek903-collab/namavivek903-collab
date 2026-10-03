@@ -992,7 +992,7 @@ document.addEventListener('click',e=>{
 },true);
 window._lastAct=Date.now();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.SESSION&&SESSION.token){try{pollUnread(true);}catch(e){}try{loadTicker();}catch(e){}}});
-const APP_VERSION='5.9.0';
+const APP_VERSION='5.9.1';
 async function ulPricePreview(){const el=document.getElementById('ulPriceShow');if(!el||!window.UL)return;const r=await rpc('fn_price_preview',{p_token:SESSION.token,p_source:UL.source||null,p_category:UL.category||null}).catch(()=>null);el.textContent=r&&r.ok&&r.price!=null?'◉'+fmt(r.price)+(r.auto?' · auto-decay':' · fixed'):'— no price set for this source';}
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent='HuntFloor v'+APP_VERSION;});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
@@ -2222,6 +2222,25 @@ function intelLeadTime(T){
 }
 function cabinOpen(uid){window._CABUID=uid;denGo('cabin');}
 
+
+async function denFnb(){
+  const el=$('intelBody');el.innerHTML=skel();const d=await rpc('fn_admin_fnb_desk',{p_token:SESSION.token,p_days:window._FNBD||30});if(!d.ok){el.innerHTML='<div class="muted">'+esc(d.error||'')+'</div>';return;}
+  const m=d.month||{},e=d.economics||{},at=d.attach||{},dp=d.deposits||{},fb=d.feedback||{},tk=d.tasks||{};const pct=m.target?Math.min(100,Math.round(100*m.confirmed_value/m.target)):null;
+  const stL=s=>(typeof fnbStateLabel==='function'?fnbStateLabel(s):s);
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div class="muted" style="font-size:12px">The F&B division: pipeline, money, where orders come from, why they're lost, and what the kitchen sells.</div><div style="display:flex;gap:4px">${[30,60,90].map(n=>`<button class="fchip ${(window._FNBD||30)===n?'on':''}" onclick="window._FNBD=${n};denFnb()">${n}d</button>`).join('')}<button class="btn sm ghost" onclick="go('fnb_queue')">Open the desk</button></div></div>
+  <div class="grid c4" style="margin-bottom:12px"><div class="card stat"><div class="n">₹${fmt(m.confirmed_value||0)}</div><div class="l">Confirmed this month · ${m.confirmed_n||0} orders${pct!=null?' · '+pct+'% of ₹'+fmt(m.target):''}</div></div><div class="card stat"><div class="n">₹${fmt(m.collected||0)}</div><div class="l">Collected this month</div></div><div class="card stat"><div class="n">${at.bookings?Math.round(100*(at.with_food_confirmed||0)/at.bookings)+'%':'—'}</div><div class="l">Food attach · ${at.with_food_confirmed||0} of ${at.bookings||0} bookings${at.with_food_interest?' · '+at.with_food_interest+' showed interest':''}</div></div><div class="card stat"><div class="n">${fb.avg!=null?'★'+fb.avg:'—'}</div><div class="l">Feedback · ${fb.n||0} scored</div></div></div>
+  ${(d.urgent||[]).length?`<div class="card" style="border-color:rgba(226,85,79,.45);margin-bottom:12px"><b>⚠️ Inside 7 days, not confirmed</b>${d.urgent.map(u=>`<div style="font-size:12.5px;margin-top:4px">${esc(u.customer||'')} · ${esc(u.event)} (${u.days}d) · ${u.pax||'?'} pax · <span class="muted">${stL(u.state)}</span>${u.hunter?' · '+esc(u.hunter):''}</div>`).join('')}</div>`:''}
+  <div class="grid c2" style="align-items:start">
+    <div class="card"><b>Pipeline</b><table style="width:100%;font-size:12px;margin-top:6px"><tbody>${(d.pipeline||[]).map(p=>`<tr><td>${stL(p.state)}</td><td class="right">${p.n}</td><td class="right">₹${fmt(p.value)}</td></tr>`).join('')||'<tr><td class="muted">Nothing yet.</td></tr>'}</tbody></table><div class="muted" style="font-size:11px;margin-top:6px">Tasks open ${tk.open||0} · overdue ${tk.overdue||0}</div></div>
+    <div class="card"><b>Where orders come from</b><table style="width:100%;font-size:12px;margin-top:6px"><thead><tr><th>Origin</th><th class="right">Orders</th><th class="right">Confirmed</th><th class="right">Value</th></tr></thead><tbody>${(d.origins||[]).map(o=>`<tr><td>${esc(o.origin.replace('_',' '))}</td><td class="right">${o.n}</td><td class="right">${o.won}</td><td class="right">₹${fmt(o.value)}</td></tr>`).join('')||'<tr><td class="muted">—</td></tr>'}</tbody></table>
+      <b style="display:block;margin-top:10px">Why we lose food orders</b>${(d.declines||[]).map(x=>`<div style="font-size:12px;display:flex;justify-content:space-between"><span>${esc(x.reason.replace(/_/g,' '))}</span><span>${x.n}</span></div>`).join('')||'<div class="muted" style="font-size:12px">No declines logged yet.</div>'}</div>
+    <div class="card"><b>Economics</b><div style="font-size:12.5px;margin-top:6px">Avg plate ₹${fmt(e.avg_plate||0)} · avg order ₹${fmt(e.avg_order||0)} · avg ${e.avg_pax||0} pax · lead time ${e.avg_lead_days||0} days<br>Discounts: ${e.discount_n||0} orders${e.discount_avg?' · avg '+e.discount_avg+'%':''}${e.discount_over10?' · <span style="color:#e8a49b">'+e.discount_over10+' above 10%</span>':''}</div>
+      <b style="display:block;margin-top:10px">Kitchens</b>${(d.kitchens||[]).map(k=>`<div style="font-size:12px;display:flex;justify-content:space-between"><span>${k.kitchen==='veda'?'SatvaVeda':k.kitchen==='rasa'?'SatvaRasa':esc(k.kitchen)}</span><span>${k.n} · ₹${fmt(k.value)}</span></div>`).join('')}
+      <b style="display:block;margin-top:10px">Hunters bringing food</b>${(d.by_hunter||[]).map(h=>`<div style="font-size:12px;display:flex;justify-content:space-between"><span>${esc(h.hunter)}</span><span>${h.confirmed}/${h.orders} · ₹${fmt(h.value)}</span></div>`).join('')||'<div class="muted" style="font-size:12px">None yet — the hunter "Food?" field feeds this.</div>'}</div>
+    <div class="card"><b>What the kitchen sells</b>${(d.top_dishes||[]).map((t,i)=>`<div style="font-size:12px;display:flex;justify-content:space-between"><span>${i+1}. ${esc(t.dish)}</span><span class="muted">${t.n}</span></div>`).join('')||'<div class="muted" style="font-size:12px">Needs locked menus.</div>'}
+      <b style="display:block;margin-top:10px">🔒 Deposits</b><div style="font-size:12.5px">Held ₹${fmt(dp.held||0)} (${dp.held_n||0}) · to collect ₹${fmt(dp.due||0)} · refunds due ₹${fmt(dp.refund_pending||0)}${dp.overdue?' · <span style="color:#e8a49b">'+dp.overdue+' overdue</span>':''} · deducted ₹${fmt(dp.deducted||0)}</div></div>
+  </div>`;
+}
 async function denMeetings(){
   const el=$('intelBody');el.innerHTML=skel();const d=await rpc('fn_admin_meetings_desk',{p_token:SESSION.token});if(!d.ok){el.innerHTML='<div class="muted">'+esc(d.error||'')+'</div>';return;}
   MEET.data=Object.assign(MEET.data||{},{is_admin:true});const st=d.stats||{};
@@ -3972,6 +3991,7 @@ VIEWS.a_biz=async()=>{
     <button class="sec ${window._DSEC==='owners'?'on':''}" onclick="denGo('owners')">🏠 Owner relations</button>
     <button class="sec ${window._DSEC==='cabin'?'on':''}" onclick="denGo('cabin')">🪑 Hunter cabin</button>
     <button class="sec ${window._DSEC==='meetings'?'on':''}" onclick="denGo('meetings')">🎧 Meetings</button>
+    <button class="sec ${window._DSEC==='fnb'?'on':''}" onclick="denGo('fnb')">🍽️ F&B</button>
     <button class="sec ${window._DSEC==='sales'?'on':''}" onclick="denGo('sales')">💰 Sales intelligence</button>
     <button class="sec ${window._DSEC==='floor'?'on':''}" onclick="denGo('floor')">🏭 Floor intelligence</button></div>
   <div id="denBody"></div>`;
@@ -3991,6 +4011,7 @@ function denSection(){
   if(s==='alerts'){el.innerHTML=`<div id="intelBody"></div>`;window._ITAB='actions';intelTab();return;}
   if(s==='cabin'){el.innerHTML=`<div id="intelBody"></div>`;cabinView();return;}
   if(s==='meetings'){el.innerHTML=`<div id="intelBody"></div>`;denMeetings();return;}
+  if(s==='fnb'){el.innerHTML=`<div id="intelBody"></div>`;denFnb();return;}
   if(s==='owners'){el.innerHTML=`<div id="intelBody"></div>`;denOwnerRelations();return;}
   if(s==='arbiter'){el.innerHTML=`<div id="intelBody"></div>`;intelArbiter();return;}
   if(s==='discipline'){el.innerHTML=`<div id="intelBody"></div>`;denDiscipline();return;}
@@ -4664,7 +4685,7 @@ function claimModal(pid){
   <label style="margin-top:8px">Property <b>booked</b> <span style="color:var(--gold-2)">*</span> <span class="muted" style="font-weight:400;font-size:10.5px">may differ from what they enquired for</span> <span class="muted" style="font-weight:400;font-size:11px">— where the guest is going; ground ops runs the check-in from this</span></label>
   ${propPicker('clProp', p.br_property||'')}
   <label style="margin-top:8px">🍽️ Food in this booking?</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[['none','Not included'],['included','Included in this value'],['part','Part included'],['separate','Separate food booking']].map(([k,l])=>`<button type="button" class="fchip ${k==='none'?'on':''}" data-clfood="${k}" onclick="document.querySelectorAll('[data-clfood]').forEach(b=>b.classList.remove('on'));this.classList.add('on');$('clFoodAmt').style.display=(this.dataset.clfood==='included'||this.dataset.clfood==='part')?'block':'none'">${l}</button>`).join('')}</div><input id="clFoodAmt" type="number" placeholder="food ₹ inside this value" style="display:none;margin-top:6px">
-  <label style="margin-top:8px">🔒 Security deposit (₹) <span class="muted" style="font-weight:400;font-size:11px">— refundable, not part of the sale value; prefilled from the property</span></label><input id="clDep" type="number" min="0" placeholder="0" value="">
+  <label style="margin-top:8px">🔒 Security deposit agreed for this booking (₹) <span class="muted" style="font-weight:400;font-size:11px">— refundable, varies per booking, not part of the sale value</span></label><input id="clDep" type="number" min="0" placeholder="0" value="">
   <label>Note for admin (optional)</label><input id="clNote" placeholder="e.g. Sharma wedding, 14 Nov, invoice #2231">
   <div class="muted" style="font-size:11.5px;margin-top:8px">Admin approves → the Bell rings, your settlement and the leaderboard update.</div>
   <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn gold" onclick="doClaim(${pid})">Submit claim</button></div>`);
@@ -4684,7 +4705,7 @@ function claimModal(pid){
   <label style="margin-top:8px">Property <span style="color:var(--gold-2)">*</span> <span class="muted" style="font-weight:400;font-size:11px">— where the guest is going; ground ops runs the check-in from this</span></label>
   ${propPicker('clProp', p.br_property||'')}
   <label style="margin-top:8px">🍽️ Food in this booking?</label><div style="display:flex;gap:6px;flex-wrap:wrap">${[['none','Not included'],['included','Included in this value'],['part','Part included'],['separate','Separate food booking']].map(([k,l])=>`<button type="button" class="fchip ${k==='none'?'on':''}" data-clfood="${k}" onclick="document.querySelectorAll('[data-clfood]').forEach(b=>b.classList.remove('on'));this.classList.add('on');$('clFoodAmt').style.display=(this.dataset.clfood==='included'||this.dataset.clfood==='part')?'block':'none'">${l}</button>`).join('')}</div><input id="clFoodAmt" type="number" placeholder="food ₹ inside this value" style="display:none;margin-top:6px">
-  <label style="margin-top:8px">🔒 Security deposit (₹) <span class="muted" style="font-weight:400;font-size:11px">— refundable, not part of the sale value; prefilled from the property</span></label><input id="clDep" type="number" min="0" placeholder="0" value="">
+  <label style="margin-top:8px">🔒 Security deposit agreed for this booking (₹) <span class="muted" style="font-weight:400;font-size:11px">— refundable, varies per booking, not part of the sale value</span></label><input id="clDep" type="number" min="0" placeholder="0" value="">
   <label>Note for admin (optional)</label><input id="clNote" placeholder="e.g. Sharma wedding, 14 Nov, invoice #2231">
   <div class="muted" style="font-size:11.5px;margin-top:8px">Admin approves → the Bell rings, your settlement and the leaderboard update.</div>
   <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn gold" onclick="doClaim(${pid})">Submit claim</button></div>`);

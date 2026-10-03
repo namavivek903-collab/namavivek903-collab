@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Feast confirmation · DestinMe</title>
+<style>
+:root{--ink:#1F160F;--mute:#6F5E4F;--paper:#FCF4E9;--line:rgba(120,85,30,.22);--veda:#1E6B3C;--rasa:#9C1F1F;--gold:#B8923D}
+*{box-sizing:border-box}body{margin:0;background:#F3EADB;color:var(--ink);font:15px/1.5 Georgia,"Times New Roman",serif}
+.sheet{max-width:720px;margin:24px auto;background:var(--paper);border-radius:16px;box-shadow:0 20px 60px rgba(60,40,10,.18);overflow:hidden}
+.top{padding:26px 28px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.k{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)}h1{margin:4px 0 0;font-size:24px;font-weight:600}.tag{display:inline-block;padding:4px 10px;border-radius:999px;font:600 11px/1 system-ui,sans-serif;letter-spacing:1px;color:#fff}
+.body{padding:20px 28px 28px}.row{display:flex;flex-wrap:wrap;gap:14px 28px;margin-bottom:16px}.row div{min-width:140px}.row b{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:2px}
+table{width:100%;border-collapse:collapse;margin:8px 0 18px;font-family:system-ui,sans-serif;font-size:13.5px}th{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);text-align:left;padding:6px 0;border-bottom:1px solid var(--line)}td{padding:7px 0;border-bottom:1px solid rgba(120,85,30,.1)}td.r,th.r{text-align:right}
+h3{margin:18px 0 6px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute)}.menu b{display:block;margin-top:8px;font-size:13.5px}.menu div{color:#3b2f24;font-size:13.5px}
+.money{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-family:system-ui,sans-serif;font-size:14px}.money div{display:flex;justify-content:space-between;padding:3px 0}.money .t{font-weight:700;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.foot{padding:16px 28px 24px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute)}.btn{display:inline-block;margin-top:10px;padding:10px 16px;border-radius:10px;background:var(--gold);color:#2b1608;font:600 13px system-ui,sans-serif;text-decoration:none}
+@media print{body{background:#fff}.sheet{box-shadow:none;margin:0;max-width:none}.btn{display:none}}
+.err{padding:40px;text-align:center;color:var(--mute)}
+</style></head><body>
+<div class="sheet" id="sheet"><div class="err">Loading your confirmation…</div></div>
+<script>
+const SUPABASE_URL='https://pmsjeivlvxxkkibwlvuu.supabase.co', SUPABASE_KEY='sb_publishable__3MgDWLyLC7Mm4uHmr-MKw_DSI9OQAg';
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');const inr=n=>'₹'+Math.round(Number(n||0)).toLocaleString('en-IN');
+(async()=>{
+  const t=new URLSearchParams(location.search).get('t');const el=document.getElementById('sheet');
+  if(!t){el.innerHTML='<div class="err">This link is incomplete.</div>';return;}
+  let d;try{d=await fetch(SUPABASE_URL+'/rest/v1/rpc/fn_fnb_public',{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY},body:JSON.stringify({p_token:t})}).then(r=>r.json());}catch(e){}
+  if(!d||!d.ok){el.innerHTML='<div class="err">We could not find this confirmation. Please contact DestinMe F&B.</div>';return;}
+  const o=d.order;const K=o.kitchen==='rasa'?{n:'SatvaRasa Kitchen',c:'var(--rasa)'}:{n:'SatvaVeda Kitchen',c:'var(--veda)'};
+  document.title=(o.confirmed?'Feast confirmation':'Feast proposal')+' · '+K.n;
+  const menu=o.menu?Object.entries(o.menu).filter(([k,v])=>v&&v.length).map(([k,v])=>`<b>${esc(k)}</b><div>${v.map(esc).join(' · ')}</div>`).join(''):'<div style="color:var(--mute)">Menu to be finalised with our team.</div>';
+  el.innerHTML=`<div class="top"><div><div class="k">${K.n} · by DestinMe</div><h1>${o.confirmed?'Feast confirmation':'Feast proposal'}</h1><div style="color:var(--mute);font-size:13px;margin-top:4px">Ref ${esc(o.ref)}</div></div><span class="tag" style="background:${K.c}">${o.confirmed?'CONFIRMED':'PROPOSAL'}</span></div>
+  <div class="body">
+    <div class="row"><div><b>Guest</b>${esc(o.customer||'')}</div><div><b>Date</b>${esc((o.event_label||'').replace(/\s+/g,' ').trim())}</div><div><b>Guests</b>${esc(o.pax||'—')}</div>${o.property?`<div><b>Venue</b>${esc(o.property)}${o.address?'<div style="color:var(--mute);font-size:12.5px">'+esc(o.address)+'</div>':''}</div>`:''}</div>
+    ${(o.meals||[]).length?`<h3>Service schedule</h3><table><thead><tr><th>Day</th><th>Meal</th><th>Service from</th><th class="r">Guests</th></tr></thead><tbody>${o.meals.map(m=>`<tr><td>${esc(m.day)}</td><td style="text-transform:capitalize">${esc(m.meal)}</td><td>${esc(m.time)}</td><td class="r">${esc(m.pax||o.pax||'')}</td></tr>`).join('')}</tbody></table>`:''}
+    <h3>Menu</h3><div class="menu">${menu}</div>
+    <h3>Commercials</h3><div class="money">${o.pricing&&o.pricing.plate?`<div><span>Per plate${o.discount_pct?' (after '+o.discount_pct+'% discount)':''}</span><span>${inr(o.pricing.eff_plate||o.pricing.plate)}</span></div><div><span>${esc(o.pax||'')} guests · subtotal</span><span>${inr(o.pricing.subtotal||0)}</span></div><div><span>GST</span><span>${inr(o.pricing.gst||0)}</span></div>`:''}<div class="t"><span>Total</span><span>${inr(o.quote_total||0)}</span></div>${o.paid_amount?`<div><span>Advance received</span><span>${inr(o.paid_amount)}</span></div><div class="t"><span>Balance on the day</span><span>${inr(o.balance)}</span></div>`:o.advance_amount?`<div><span>Advance to confirm</span><span>${inr(o.advance_amount)}</span></div>`:''}</div>
+    ${o.notes?`<h3>Notes</h3><div style="font-size:13.5px">${esc(o.notes)}</div>`:''}
+    ${o.confirmed?`<h3>On the day</h3><div style="font-size:13.5px">${o.curator?`Your curator <b>${esc(o.curator)}</b>${o.curator_phone?' · '+esc(o.curator_phone):''} will be on site for delivery, set-up and service.`:'Our curator will be introduced a day before the event.'} Kitchen desk: ${esc(o.kitchen_phone||'')}.</div>`:''}
+    <a class="btn" href="#" onclick="window.print();return false">Save as PDF</a>
+  </div>
+  <div class="foot">Standard accompaniments (papad, pickle, curd) are included. Menus are prepared fresh; final guest count is taken 48 hours before service. DestinMe Private Limited · Hyderabad · thefeastory.com</div>`;
+})();
+</script></body></html>

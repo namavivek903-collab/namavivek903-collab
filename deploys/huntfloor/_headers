@@ -1,0 +1,10 @@
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/CHANGELOG.md
+  Cache-Control: public, max-age=0, must-revalidate
+/assets/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
+/assets/gangs/*
+  Cache-Control: public, max-age=604800

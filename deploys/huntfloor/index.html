@@ -992,7 +992,7 @@ document.addEventListener('click',e=>{
 },true);
 window._lastAct=Date.now();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.SESSION&&SESSION.token){try{pollUnread(true);}catch(e){}try{loadTicker();}catch(e){}}});
-const APP_VERSION='5.6.2';
+const APP_VERSION='5.7.0';
 async function ulPricePreview(){const el=document.getElementById('ulPriceShow');if(!el||!window.UL)return;const r=await rpc('fn_price_preview',{p_token:SESSION.token,p_source:UL.source||null,p_category:UL.category||null}).catch(()=>null);el.textContent=r&&r.ok&&r.price!=null?'◉'+fmt(r.price)+(r.auto?' · auto-decay':' · fixed'):'— no price set for this source';}
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent='HuntFloor v'+APP_VERSION;});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
@@ -1718,8 +1718,8 @@ function buildBottomBar(){
     accounts:[['broch','Brochures',ICO.home],['vouchers','Vouchers',ICO.list],['chat','Chat',ICO.chatIc]],
     leads:[['a_leads','Leads',ICO.store],['avail','Availability',ICO.list],['gen','Docs',ICO.home],['chat','Chat',ICO.chatIc]],
     orm:[['orm_dash','Home',ICO.home],['props','Properties',ICO.list],['onb_leads','Leads',ICO.store],['chat','Chat',ICO.chatIc]],
-    fnb:[['fnb_queue','Queue',ICO.list],['fnb_done','Done',ICO.home],['chat','Chat',ICO.chatIc]],
-    production:[['fnb_queue','Queue',ICO.list],['fnb_done','Done',ICO.home],['chat','Chat',ICO.chatIc]],
+    fnb:[['fnb_queue','Queue',ICO.list],['fnb_tasks','Tasks',ICO.home],['chat','Chat',ICO.chatIc]],
+    production:[['fnb_tasks','Tasks',ICO.home],['fnb_queue','Queue',ICO.list],['chat','Chat',ICO.chatIc]],
     marketing:[['mkt_dash','Tracker',ICO.home],['mkt_stays','Stays',ICO.clock],['mkt_plan','Calendar',ICO.list],['mkt_post','Log',ICO.store],['mkt_coach','Coach',ICO.chatIc]],
     mgo:[['ops_today','Today',ICO.home],['ops_stays','Check-ins',ICO.list],['requests','Requests',ICO.store],['assets','Assets',ICO.chatIc]],
   };
@@ -1826,8 +1826,8 @@ const NAV_LEADER=[];
 const NAV_ACC=[['gen','Generate Docs'],['acc_sales','Record sale'],['acc_contacts','Fix contacts'],['mine','My sales'],['a_ledger','Ledger'],['board','Honour Board'],['chat','Floor Chat'],['broch','Brochures'],['res','Resources'],['contacts','Contacts'],['rules','Rules of the Game']];
 const NAV_ORM=[['props','Properties'],['requests','Requests'],['ops_stays','Check-ins'],['assets','Assets'],['orm_dash','Dashboard'],['onb_leads','Onboarding leads'],['wallet','Wallet'],['contacts','Contacts'],['chat','Floor Chat'],['rules','Rules of the Game']];
 const NAV_MKT=[['mkt_dash','Content tracker'],['mkt_stays','Upcoming stays'],['mkt_plan','Calendar'],['mkt_post','Log a post'],['mkt_coach','Content Coach'],['mkt_pages','Pages'],['mkt_impact','Posts → enquiries'],['mkt_sources','Where leads come from'],['board','Leaderboard'],['contacts','Contacts'],['chat','Floor Chat'],['rules','Rules of the Game']];
-const NAV_FNB=[['fnb_queue','F&B Queue'],['fnb_done','Completed'],['chat','Floor Chat'],['rules','Rules of the Game']];
-const NAV_MGO=[['ops_today','Today'],['ops_stays','Check-ins'],['requests','Requests'],['assets','Assets'],['curators','Curators'],['props','Properties'],['contacts','Contacts'],['chat','Floor Chat'],['rules','Rules of the Game']];
+const NAV_FNB=[['fnb_queue','F&B Queue'],['fnb_tasks','Tasks'],['fnb_done','Completed'],['chat','Floor Chat'],['rules','Rules of the Game']];
+const NAV_MGO=[['ops_today','Today'],['fnb_tasks','Food tasks'],['ops_stays','Check-ins'],['requests','Requests'],['assets','Assets'],['curators','Curators'],['props','Properties'],['contacts','Contacts'],['chat','Floor Chat'],['rules','Rules of the Game']];
 const NAV_LM=[['#','Leads Desk'],['a_leads','Post & Manage'],['avail','Availability'],['a_meta','Cities & Categories'],['#','Create'],['gen','Generate Docs'],['#','Library'],['a_files','Library'],['a_hub','Corporate Hub'],['a_contacts','Contacts'],['#','Me'],['wfh','Work From Home'],['#','The Floor'],['chat','Floor Chat'],['rules','Rules']];
 const NAV_HR=[['#','HR'],['a_wfh','WFH Requests'],['a_attendance','Attendance'],['a_fund','Party Funds'],['#','The Floor'],['chat','Floor Chat'],['contacts','Contacts'],['rules','Rules']];
 const NAV_ADMIN=[
@@ -1891,7 +1891,7 @@ function enterApp(){
   }
   const sb=$('sndBtn');if(sb)sb.innerHTML=SFX.off()?ICO.mute:ICO.vol;
   setTimeout(()=>{if(!sndUnlocked())sndBanner();},900);
-  window._ALLOWED=[...document.querySelectorAll('#navBox a[data-v]')].map(a=>a.dataset.v);if(SESSION.user.role==='admin')window._ALLOWED.push('fnb_queue','fnb_done','props','onb_leads','orm_dash','mgo_dash','stays','mkt_dash','mkt_pages','mkt_post','mkt_sources','mkt_coach','mkt_plan','mkt_impact','ops_stays','curators','ops_approvals','a_fnb','ops_today','requests','assets','mgo_dash');
+  window._ALLOWED=[...document.querySelectorAll('#navBox a[data-v]')].map(a=>a.dataset.v);if(SESSION.user.role==='admin')window._ALLOWED.push('fnb_queue','fnb_done','fnb_tasks','props','onb_leads','orm_dash','mgo_dash','stays','mkt_dash','mkt_pages','mkt_post','mkt_sources','mkt_coach','mkt_plan','mkt_impact','ops_stays','curators','ops_approvals','a_fnb','ops_today','requests','assets','mgo_dash');
   const hv=(location.hash||'').replace('#/','');
   const dflt=SESSION.user.role==='admin'?'a_dash':SESSION.user.role==='accounts'?'gen':SESSION.user.role==='hr'?'a_wfh':SESSION.user.role==='leads'?'a_leads':SESSION.user.role==='orm'?'props':SESSION.user.role==='mgo'?'ops_today':(SESSION.user.role==='fnb'||SESSION.user.role==='production')?'fnb_queue':SESSION.user.role==='marketing'?'mkt_dash':'dash';
   go(hv&&window._ALLOWED.includes(hv)&&VIEWS[hv]?hv:dflt);
@@ -3573,6 +3573,7 @@ async function fnbOpen(id){
     <div class="grid c3" style="gap:10px;margin-top:6px"><div><label>Included ₹ (if part/included)</label><input id="fnbIncl" type="number" value="${o.billing_included||''}"></div><div><label>Advance ₹</label><input id="fnbAdv" type="number" value="${o.advance_amount||''}"></div><div><label>Paid ₹ · ref</label><div style="display:flex;gap:4px"><input id="fnbPaid" type="number" value="${o.paid_amount||''}" style="width:50%"><input id="fnbRef" placeholder="UPI/Razorpay ref" style="width:50%"></div></div></div>
     <label style="margin-top:8px">Move to</label><div style="display:flex;gap:6px;flex-wrap:wrap">${FNB_STATES.map(([k,l])=>`<button class="fchip ${o.state===k?'on':''}" onclick="fnbSave(${o.id},'${k}')">${l}</button>`).join('')}<button class="fchip" style="border-color:#8c3a3a" onclick="fnbDecline(${o.id})">Declined</button></div>
     <label style="margin-top:8px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="fnbChange" ${o.change_requested?'checked':''}> Customer considering a change to the menu</label>`:''}
+    ${['confirmed','in_production','dispatched','served','feedback'].includes(o.state)?`<div class="muted" style="font-size:11.5px;margin-top:8px">Production tasks are under <b>Tasks</b>${o.curator_name?' · curator '+esc(o.curator_name):' · ground ops to assign a curator'}.</div>`:''}
     <details style="margin-top:10px"><summary class="muted" style="font-size:11.5px;cursor:pointer">History (${(o.log||[]).length})</summary>${(o.log||[]).map(l=>`<div class="muted" style="font-size:11px">${new Date(l.at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})} · ${esc(l.who||'')} · ${esc(l.body||'')}</div>`).join('')}</details>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button>${canProd?`<button class="btn gold" onclick="fnbSave(${o.id})">Save</button>`:''}</div>`);
 }
@@ -3613,6 +3614,22 @@ function fnbDesign(id,mode){
 }
 function fnbPdf(id){fnbDesign(id,'pdf');}
 
+
+/* ===== Tasks — production (procurement/prep/dispatch), ground ops (delivery & serving + curator), F&B (feedback) ===== */
+const TASK_ICON={procurement:'🛒',prep:'👨‍🍳',dispatch:'🚚',delivery:'🍽️',feedback:'☎️'};
+VIEWS.fnb_tasks=async()=>{
+  C.innerHTML=skel();const d=await rpc('fn_tasks',{p_token:SESSION.token});if(!d.ok){C.innerHTML='<div class="muted">'+esc(d.error||'')+'</div>';return;}window._TASKS=d;
+  const open=(d.tasks||[]).filter(t=>t.status!=='done'),done=(d.tasks||[]).filter(t=>t.status==='done');
+  const byDay={};open.forEach(t=>{const k=(t.due_label||'').slice(0,10);(byDay[k]=byDay[k]||[]).push(t);});
+  const row=t=>`<div class="card ${t.overdue?'fnb-urgent':''}" style="margin-bottom:8px;padding:12px 14px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div style="min-width:0"><b>${TASK_ICON[t.kind]||'•'} ${esc(t.title)}</b><div class="muted" style="font-size:11.5px;margin-top:2px">${esc(t.detail||'')}</div><div class="muted" style="font-size:11px;margin-top:2px">Due ${esc(t.due_label||'')}${t.overdue?' · <span style="color:#e8a49b">overdue</span>':''}${t.property?' · '+esc(t.property):''}${t.kind==='delivery'?' · curator: <b>'+esc(t.curator||'not assigned')+'</b>':''}${t.assignee_name?' · '+esc(t.assignee_name):''}${t.note?' · '+esc(t.note):''}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${t.status==='done'?`<span class="chip ok">done${t.done_by?' · '+esc(t.done_by):''}</span>`:`${t.kind==='delivery'?`<button class="btn sm ghost" onclick="taskCurator(${t.id})">👤 ${t.curator?'Change curator':'Assign curator'}</button>`:''}${t.status==='open'?`<button class="btn sm ghost" onclick="taskSet(${t.id},'doing')">Start</button>`:''}<button class="btn sm gold" onclick="taskDone(${t.id})">✓ Done</button>`}${t.order_id&&['fnb','production','admin'].includes(SESSION.user.role)?`<button class="btn sm ghost" onclick="fnbOpen(${t.order_id})">Order</button>`:''}</div></div></div>`;
+  C.innerHTML=`<div class="pagehead"><h2 class="serif">${SESSION.user.role==='mgo'?'🍽️ Food deliveries':'🧾 Tasks'}</h2><span class="muted" style="font-size:12px">${open.length} open · ${open.filter(t=>t.overdue).length} overdue</span></div>
+    ${Object.keys(byDay).length?Object.entries(byDay).map(([k,ts])=>`<h4 style="margin:10px 0 6px">${esc(k)}</h4>${ts.map(row).join('')}`).join(''):'<div class="card"><div class="muted">No open tasks. They appear the moment production confirms an order.</div></div>'}
+    ${done.length?`<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Done this week (${done.length})</summary>${done.map(row).join('')}</details>`:''}`;
+};
+async function taskSet(id,status,note){const r=await rpc('fn_task_update',{p_token:SESSION.token,p_id:id,p_status:status,p_note:note||null});if(!r.ok){toast(r.error,true);return;}toast(status==='done'?'Done':'Started');VIEWS.fnb_tasks();}
+function taskDone(id){const t=((window._TASKS||{}).tasks||[]).find(x=>x.id===id)||{};modal(`<h3 class="serif" style="color:var(--gold-2);margin-bottom:6px">Mark done — ${esc(t.title||'')}</h3><label>Note (optional)</label><input id="tkNote" placeholder="${t.kind==='delivery'?'served on time, 38 pax turned up':t.kind==='feedback'?'score 4/5 — loved the biryani, dessert late':'anything the next person should know'}"><div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn gold" onclick="closeModal();taskSet(${id},'done',$('tkNote').value)">Done</button></div>`);}
+function taskCurator(id){const d=window._TASKS||{};const t=(d.tasks||[]).find(x=>x.id===id)||{};modal(`<h3 class="serif" style="color:var(--gold-2);margin-bottom:6px">Curator for ${esc(t.customer||'')}</h3><div class="muted" style="font-size:11.5px;margin-bottom:8px">Follows up delivery, set-up and serving on the day.</div><div class="osheet">${(d.curators||[]).map(c=>`<button onclick="(async()=>{const r=await rpc('fn_task_update',{p_token:SESSION.token,p_id:${id},p_curator_id:${c.id},p_curator_name:${jsq(c.name)}});if(!r.ok){toast(r.error,true);return;}closeModal();toast('Curator set');VIEWS.fnb_tasks();})()"><b>${esc(c.name)}</b><span class="muted">${esc(c.phone||'')}</span></button>`).join('')||'<div class="muted">No curators yet — add them under Curators.</div>'}</div><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);}
 VIEWS.stays=async()=>{
   C.innerHTML=skel();const sc=window._STSC||'upcoming';const D=await rpc('fn_stays',{p_token:SESSION.token,p_scope:sc});if(!D.ok){C.innerHTML=`<div class="card neg">${esc(D.error)}</div>`;return;}
   const S=D.stays||[];const chip=(k,l)=>`<button class="fchip ${sc===k?'on':''}" onclick="window._STSC='${k}';VIEWS.stays()">${l}</button>`;

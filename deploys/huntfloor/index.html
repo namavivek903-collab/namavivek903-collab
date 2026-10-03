@@ -992,7 +992,7 @@ document.addEventListener('click',e=>{
 },true);
 window._lastAct=Date.now();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.SESSION&&SESSION.token){try{pollUnread(true);}catch(e){}try{loadTicker();}catch(e){}}});
-const APP_VERSION='5.12.0';
+const APP_VERSION='5.12.1';
 async function ulPricePreview(){const el=document.getElementById('ulPriceShow');if(!el||!window.UL)return;const r=await rpc('fn_price_preview',{p_token:SESSION.token,p_source:UL.source||null,p_category:UL.category||null}).catch(()=>null);el.textContent=r&&r.ok&&r.price!=null?'◉'+fmt(r.price)+(r.auto?' · auto-decay':' · fixed'):'— no price set for this source';}
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent='HuntFloor v'+APP_VERSION;});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
@@ -5928,7 +5928,7 @@ VIEWS.a_team=async()=>{
     <td><b>${u.user_id}</b></td><td>${esc(u.display_name||'—')}</td>
     <td>${uc.map(c=>`<span class="chip cat">${esc(c)}</span>`).join(' ')}</td>
     <td>${(u.categories||[]).map(c=>`<span class="chip cat">${c}</span>`).join(' ')}</td>
-    <td>${u.role==='leader'?'<span class="chip hv">LEADER</span>':u.role==='leads'?'<span class="chip cat">LEADS MGR</span>':u.role==='hr'?'<span class="chip cat">PEOPLE DESK</span>':u.role==='accounts'?'<span class="chip cat">ACCOUNTS</span>':'BDE'}</td>
+    <td><button class="chip ${u.role==='leader'?'hv':u.role==='bde'?'':'cat'}" style="cursor:pointer" title="Change role" onclick="changeRoleModal('${u.user_id}','${u.role}')">${ROLE_LABEL[u.role]||esc((u.role||'').toUpperCase())}</button></td>
     <td>${u.active?'<span class="chip ok">ACTIVE</span>':'<span class="chip warn">INACTIVE</span>'}</td>
     <td class="right">◉ ${fmt(u.balance)}</td>
     <td style="white-space:nowrap">${u.active?`<button class="btn sm gold" onclick="evaluateMember('${u.user_id}')">Evaluate</button>`:''}
@@ -6024,7 +6024,7 @@ function createUserModal(){
     <div><label>Role</label><select id="cuRole" onchange="$('cuCityWrap').style.display=['bde','leader'].includes(this.value)?'':'none'">
       <option value="bde">BDE</option><option value="leader">Team Leader</option><option value="orm">Owner Relations (ORM)</option><option value="mgo">Ground Ops (MGO)</option><option value="marketing">Marketing / Social media</option>
       <option value="leads">Leads Manager (no market)</option><option value="hr">People Desk (HR)</option>
-      <option value="accounts">Accounts</option></select></div>
+      <option value="accounts">Accounts</option><option value="fnb">F&B desk</option><option value="production">Kitchen / production</option></select></div>
     <div><label>Password (6+ chars)</label><input id="cuPass" placeholder="e.g. Flint-204-Oak"></div>
   </div>
   <div id="cuCityWrap" style="margin-top:10px"><label>Cities (comma-separated)</label><input id="cuCities" placeholder="Hyderabad, Bengaluru">
@@ -6192,13 +6192,20 @@ async function togglePip(uid,on){
   if(!r.ok){toast(r.error,true);return;}
   toast(on?uid+' is on the Comeback Trail — leads 25% off':uid+' is off PIP — full price again');go('a_team');
 }
+const ROLE_LABEL={bde:'BDE',leader:'LEADER',leads:'LEADS MGR',hr:'PEOPLE DESK',accounts:'ACCOUNTS',orm:'ORM',mgo:'GROUND OPS',marketing:'MARKETING',fnb:'F&B DESK',production:'KITCHEN',admin:'ADMIN',system:'SYSTEM'};
+function changeRoleModal(uid,cur){
+  const R=[['bde','BDE'],['leader','Team Leader'],['leads','Leads Manager'],['orm','Owner Relations (ORM)'],['mgo','Ground Ops (MGO)'],['marketing','Marketing'],['hr','People Desk (HR)'],['accounts','Accounts'],['fnb','F&B desk'],['production','Kitchen / production']];
+  modal(`<h2 class="serif" style="color:var(--gold-2)">Change role — ${uid}</h2><div class="muted" style="font-size:11.5px;margin:6px 0 10px">The person lands in the right division and desk on their next login. Leads, coins and history stay with them.</div>
+  <div><label>Role</label><select id="crRole">${R.map(([k,l])=>`<option value="${k}" ${k===cur?'selected':''}>${l}</option>`).join('')}</select></div>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px"><input id="crPin" placeholder="Admin PIN" type="password" style="width:110px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn gold" onclick="(async()=>{const r=await rpc('fn_admin_set_role',{p_token:SESSION.token,p_pin:$('crPin').value,p_uid:'${uid}',p_role:$('crRole').value});if(!r.ok){toast(r.error,true);return;}closeModal();toast('Role updated');go('a_team');})()">Change</button></div>`);
+}
 function resetPwdModal(uid){
   modal(`<h2 class="serif" style="color:var(--gold-2)">Reset password — ${uid}</h2>
-  <div style="margin:14px 0"><label>New password</label><input id="rpNew"></div>
-  <button class="btn" onclick="doResetPwd('${uid}')">Reset</button>`);
+  <div style="margin:14px 0"><label>New password (6+ chars)</label><input id="rpNew"></div>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end"><input id="rpPin" placeholder="Admin PIN" type="password" style="width:110px"><button class="btn gold" onclick="doResetPwd('${uid}')">Reset</button></div>`);
 }
 async function doResetPwd(uid){
-  const r=await rpc('fn_admin_reset_password',{p_token:SESSION.token,p_uid:uid,p_new:$('rpNew').value});
+  const r=await rpc('fn_admin_reset_password',{p_token:SESSION.token,p_uid:uid,p_new:$('rpNew').value,p_pin:$('rpPin').value});
   if(!r.ok){toast(r.error,true);return;}closeModal();toast('Password reset — share it securely');
 }
 VIEWS.a_approvals=async()=>{

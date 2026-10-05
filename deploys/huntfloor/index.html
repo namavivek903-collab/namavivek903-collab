@@ -992,7 +992,7 @@ document.addEventListener('click',e=>{
 },true);
 window._lastAct=Date.now();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.SESSION&&SESSION.token){try{pollUnread(true);}catch(e){}try{loadTicker();}catch(e){}}});
-const APP_VERSION='5.12.2';
+const APP_VERSION='5.12.3';
 async function ulPricePreview(){const el=document.getElementById('ulPriceShow');if(!el||!window.UL)return;const r=await rpc('fn_price_preview',{p_token:SESSION.token,p_source:UL.source||null,p_category:UL.category||null}).catch(()=>null);el.textContent=r&&r.ok&&r.price!=null?'◉'+fmt(r.price)+(r.auto?' · auto-decay':' · fixed'):'— no price set for this source';}
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent='HuntFloor v'+APP_VERSION;});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
@@ -3738,8 +3738,17 @@ async function depLink(id){const x=((window._DEPS||{}).items||[]).find(d=>d.id==
 
 /* ===== Audit calls: booking confirmation (lead managers) + pre-arrival (ground ops, ≤7 days). One sheet, two kinds. ===== */
 
-async function stayDocs(key){const d=await rpc('fn_stay_docs',{p_token:SESSION.token,p_key:key});if(!d.ok){toast(d.error,true);return;}const docs=d.docs||[];if(docs.length===1){window.open(docs[0].url,'_blank');return;}
-  modal(`<h3 class="serif" style="color:var(--gold-2);margin-bottom:6px">📄 Documents</h3>${docs.length?docs.map(x=>`<a class="btn ghost" style="display:block;margin-bottom:6px" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.label)}</a>`).join(''):'<div class="muted">No quotation on file for this stay'+(d.note?' — '+esc(d.note):'')+'.</div>'}<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);}
+function docLink(x){return x.url?`<a class="btn ghost" style="display:block;margin-bottom:6px" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.label)}</a>`:`<button class="btn ghost" style="display:block;margin-bottom:6px;text-align:left" onclick="(async()=>{const r=await docsCall('stay_download',{path:${jsq(x.path)}});if(!r.ok){toast(r.error,true);return;}window.open(r.url,'_blank');})()">${esc(x.label)}</button>`;}
+async function stayDocs(key){const d=await rpc('fn_stay_docs',{p_token:SESSION.token,p_key:key});if(!d.ok){toast(d.error,true);return;}const docs=d.docs||[];
+  modal(`<h3 class="serif" style="color:var(--gold-2);margin-bottom:6px">📄 Documents the customer holds</h3>${docs.length?docs.map(docLink).join(''):'<div class="muted" style="margin-bottom:8px">Nothing on file for this stay'+(d.note?' — '+esc(d.note):'')+'.</div>'}
+  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--hair-soft)"><label>Upload a booking confirmation (PDF or image)</label><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input type="file" id="sdFile" accept="application/pdf,image/*"><input id="sdNote" placeholder="note (optional)" style="flex:1;min-width:120px"><button class="btn sm gold" onclick="stayDocUpload(${jsq(key)})">Upload</button></div></div>
+  <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);}
+async function stayDocUpload(key){const f0=($('sdFile').files||[])[0];if(!f0){toast('Pick a file',true);return;}toast('Uploading…');
+  const f=/^image\//.test(f0.type)?await shrinkImage(f0,2200,0.8):f0;if(f.size>25*1024*1024){toast('Over 25 MB',true);return;}
+  const s=await docsCall('stay_upload',{stay_key:key,filename:f.name});if(!s.ok){toast(s.error,true);return;}
+  const up=await fetch(s.url,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f});if(!up.ok){toast('Upload failed',true);return;}
+  const r=await rpc('fn_stay_upload_register',{p_token:SESSION.token,p_key:key,p_path:s.path,p_filename:f.name,p_bytes:f.size,p_kind:'confirmation',p_note:$('sdNote').value||null});if(!r.ok){toast(r.error,true);return;}
+  toast('Uploaded');stayDocs(key);}
 function stayCallSheet(s,kind,after){
   const calls=s.calls||{};const prev=calls.booking||{};const isPre=kind==='prearrival';
   modal(`<h3 class="serif" style="color:var(--gold-2);margin-bottom:2px">☎️ ${isPre?'Pre-arrival call':'Booking confirmation call'} — ${esc(s.guest||'')}</h3>
@@ -3758,7 +3767,7 @@ function stayCallSheet(s,kind,after){
     <div><label>Call notes</label><input id="scNotes" placeholder="anything the next person should know"></div></div>
   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn gold" onclick="stayCallSave(${jsq(s.key)},'${kind}')">Save call</button></div>`);
   window._SC_AFTER=after||null;
-  rpc('fn_stay_docs',{p_token:SESSION.token,p_key:s.key}).then(d=>{const box=$('scDocs');if(!box)return;if(!d.ok){box.innerHTML='';return;}const docs=d.docs||[];box.innerHTML=(docs.length?'<b>📄 What the customer holds:</b> '+docs.map(x=>`<a class="btn sm ghost" href="${esc(x.url)}" target="_blank" rel="noopener" style="margin:2px">${esc(x.label)}</a>`).join(''):'<b>📄 Documents:</b> no quotation on file'+(d.note?' — '+esc(d.note):''));}).catch(()=>{});
+  rpc('fn_stay_docs',{p_token:SESSION.token,p_key:s.key}).then(d=>{const box=$('scDocs');if(!box)return;if(!d.ok){box.innerHTML='';return;}const docs=d.docs||[];box.innerHTML=(docs.length?'<b>📄 What the customer holds:</b> '+docs.map(x=>x.url?`<a class="btn sm ghost" href="${esc(x.url)}" target="_blank" rel="noopener" style="margin:2px">${esc(x.label)}</a>`:`<button class="btn sm ghost" style="margin:2px" onclick="(async()=>{const r=await docsCall('stay_download',{path:${jsq(x.path)}});if(!r.ok){toast(r.error,true);return;}window.open(r.url,'_blank');})()">${esc(x.label)}</button>`).join(''):'<b>📄 Documents:</b> nothing on file'+(d.note?' — '+esc(d.note):''))+` <button class="btn sm ghost" style="margin:2px" onclick="stayDocs(${jsq(s.key)})">⬆ Upload confirmation</button>`;}).catch(()=>{});
 }
 async function stayCallSave(key,kind){
   const food=(document.querySelector('[data-scf].on')||{}).dataset?.scf||null;const meals=[...document.querySelectorAll('[data-scm].on')].map(b=>({meal:b.dataset.scm,pax:parseInt($('scFoodPax').value)||null}));

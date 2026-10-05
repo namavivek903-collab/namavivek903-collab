@@ -992,7 +992,7 @@ document.addEventListener('click',e=>{
 },true);
 window._lastAct=Date.now();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.SESSION&&SESSION.token){try{pollUnread(true);}catch(e){}try{loadTicker();}catch(e){}}});
-const APP_VERSION='5.12.3';
+const APP_VERSION='5.12.4';
 async function ulPricePreview(){const el=document.getElementById('ulPriceShow');if(!el||!window.UL)return;const r=await rpc('fn_price_preview',{p_token:SESSION.token,p_source:UL.source||null,p_category:UL.category||null}).catch(()=>null);el.textContent=r&&r.ok&&r.price!=null?'◉'+fmt(r.price)+(r.auto?' · auto-decay':' · fixed'):'— no price set for this source';}
 document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('verTag');if(v)v.textContent='HuntFloor v'+APP_VERSION;});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
@@ -6352,7 +6352,7 @@ VIEWS.a_leads=async()=>{
     needSlots?rpc(SESSION.user.role==='leads'?'fn_lm_bdes':'fn_admin_slots',{p_token:SESSION.token}).catch(()=>null):Promise.resolve(null),
     needMeta?rpc('fn_meta',{p_token:SESSION.token}).catch(()=>null):Promise.resolve(null),
     LF.q?rpc('fn_admin_search_leads',{p_token:SESSION.token,p_q:LF.q}).then(async s=>{const d=await rpc('fn_admin_leads',{p_token:SESSION.token,p_limit:1,p_offset:0});d.leads=s.leads||[];d.searched=true;d.total=d.leads.length;return d;})
-        :rpc('fn_admin_leads',{p_token:SESSION.token,p_limit:APS,p_offset:(LF.page||0)*APS,p_status:LF.status||'all',p_owner:LF.owner||null,p_poster:LF.poster||null})
+        :rpc('fn_admin_leads',{p_token:SESSION.token,p_limit:APS,p_offset:(LF.page||0)*APS,p_status:LF.status||'all',p_owner:LF.owner||null,p_poster:LF.poster||null,p_from:LF.from||null,p_to:LF.to||null})
   ]);
   if(slotsR){window._BDES=(slotsR.users||[]).filter(s=>s.active);window._SLOTS_T=now;}
   if(metaR){META=metaR;window._META_T=now;}
@@ -6368,9 +6368,10 @@ VIEWS.a_leads=async()=>{
       default:return true;
     }
   };
+  const inDates=l=>{if(!LF.from&&!LF.to)return true;const d=(l.created_at||'').slice(0,10);return (!LF.from||d>=LF.from)&&(!LF.to||d<=LF.to);};
   const matchAll=l=>matchStatus(l)
     &&(!LF.owner||(l.status==='sold'?l.sold_to===LF.owner:l.reserved_for===LF.owner))
-    &&(!LF.poster||l.posted_by===LF.poster);
+    &&(!LF.poster||l.posted_by===LF.poster)&&inDates(l);
   const counts=d.counts||{all:d.leads.length,available:0,held:0,sold:0,overdue:0,withdrawn:0};
   const chip=(key,label,warn)=>`<button class="fchip ${LF.status===key?'on':''} " onclick="LF.status='${key}';LF.page=0;VIEWS.a_leads()">${label}<span class="ct" ${warn&&counts[key]>0?'style="color:var(--bad);opacity:1;font-weight:700"':''}>${counts[key]}</span></button>`;
   const shown=d.searched?d.leads.filter(matchAll):d.leads;
@@ -6416,6 +6417,7 @@ VIEWS.a_leads=async()=>{
       <input id="lfQ" placeholder="Search contact, phone, subject, body, owner…" value="${esc(LF.q||'')}" style="max-width:320px"
         oninput="clearTimeout(window._lfT);const v=this.value.trim().toLowerCase();window._lfT=setTimeout(()=>{LF.q=v||null;const pos=this.selectionStart;VIEWS.a_leads().then(()=>{const n=$('lfQ');if(n){n.focus();n.selectionStart=n.selectionEnd=pos;}});},450)">
       ${LF.q?`<span class="muted" style="font-size:11.5px">Searching every lead for “${esc(LF.q)}”</span>`:''}
+      <span style="display:flex;gap:4px;align-items:center"><input type="date" value="${LF.from||''}" style="width:auto;padding:7px 8px" title="Posted from" onchange="LF.from=this.value||null;LF.page=0;VIEWS.a_leads()"><span class="muted">→</span><input type="date" value="${LF.to||''}" style="width:auto;padding:7px 8px" title="Posted to" onchange="LF.to=this.value||null;LF.page=0;VIEWS.a_leads()">${LF.from||LF.to?`<button class="btn sm ghost" onclick="LF.from=null;LF.to=null;LF.page=0;VIEWS.a_leads()">✕</button>`:''}</span>
       <select style="width:auto;padding:7px 10px" onchange="LF.owner=this.value||null;LF.page=0;VIEWS.a_leads()">
         <option value="">All owners</option>
         ${(window._BDES||[]).map(b=>`<option value="${b.user_id}" ${LF.owner===b.user_id?'selected':''}>${b.user_id} · ${esc(b.display_name||'')}</option>`).join('')}

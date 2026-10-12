@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /generator.html
-Sitemap: https://huntfloor.com/sitemap.xml
